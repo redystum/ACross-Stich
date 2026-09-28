@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="theme-color" content="#121214">
+  <meta name="description" content="Across Stitch - Modern Cross Stitch & Pixel Art Companion for PC and Android">
+  <title>Across Stitch — Pixel Art & Cross Stitch</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark">
+  <div id="app" class="app-root">
+    
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <button id="btn-projects" class="btn btn-ghost" title="Projects & Gallery" aria-label="Open Projects">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          </svg>
+          <span class="btn-text">Projects</span>
+        </button>
+
+        <div class="divider-vertical"></div>
+
+        <div class="project-title-wrapper">
+          <input type="text" id="project-name-input" class="project-name-input" value="Loading project..." placeholder="Project Name" title="Click to rename project">
+          <span id="save-status-badge" class="save-status-badge saved" title="Saved to server">
+            <span class="status-dot"></span>
+            <span class="status-label">Saved</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <!-- Progress Quick View -->
+        <div class="header-progress-compact" id="header-progress-compact">
+          <div class="progress-bar-track">
+            <div id="header-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+          <span id="header-progress-text" class="progress-label">0%</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Save button -->
+        <button id="btn-save" class="btn btn-secondary" title="Save to Server (Ctrl+S)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          <span class="btn-text">Save</span>
+        </button>
+
+        <!-- New / Import button -->
+        <button id="btn-new-project" class="btn btn-secondary" title="Import Image or New Project">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span class="btn-text">New</span>
+        </button>
+
+        <!-- Export button -->
+        <button id="btn-export" class="btn btn-primary" title="Export Image or Pattern">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span class="btn-text">Export</span>
+        </button>
+
+        <!-- Toggle palette sidebar (Mobile / Desktop) -->
+        <button id="btn-toggle-sidebar" class="btn btn-ghost btn-icon" title="Toggle Palette & Details" aria-label="Toggle Palette Sidebar">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+          </svg>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="btn-theme-toggle" class="btn btn-ghost btn-icon" title="Toggle Theme" aria-label="Toggle Theme">
+          <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="app-main">
+      <!-- Center Interactive Canvas Viewport -->
+      <section class="canvas-viewport" id="canvas-viewport" tabindex="0">
+        <canvas id="main-canvas" class="pixel-canvas"></canvas>
+
+        <!-- Canvas Hover Pixel Tooltip (Mouse only) -->
+        <div id="pixel-inspector-hud" class="pixel-hud hidden">
+          <div class="hud-item hud-coords"><span id="hud-coord-text">X: 0, Y: 0</span></div>
+          <div class="hud-item hud-color">
+            <span id="hud-color-swatch" class="hud-swatch"></span>
+            <span id="hud-color-text">#000000</span>
+          </div>
+          <div class="hud-item hud-status"><span id="hud-status-text">Stitched</span></div>
+        </div>
+      </section>
+
+      <!-- Right Sidebar: Palette, Progress, and Color Replacements -->
+      <aside class="sidebar-panel" id="sidebar-panel">
+        <div class="sidebar-header-bar">
+          <div class="sidebar-header-title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+            </svg>
+            <span>Palette & Details</span>
+          </div>
+          <button id="btn-close-sidebar" class="btn btn-ghost btn-icon btn-sm" aria-label="Close sidebar" title="Close">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Overall Progress Section -->
+        <div class="sidebar-card progress-card">
+          <div class="progress-card-header">
+            <h3>Stitch Progress</h3>
+            <span id="sidebar-progress-percentage" class="percentage-badge">0%</span>
+          </div>
+          <div class="progress-bar-track large">
+            <div id="sidebar-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-stats-grid">
+            <div class="stat-box">
+              <span class="stat-number" id="stat-completed-count">0</span>
+              <span class="stat-label">Done</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="stat-remaining-count">0</span>
+              <span class="stat-label">Remaining</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="stat-total-count">0</span>
+              <span class="stat-label">Total</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Color Palette & Replacements Section -->
+        <div class="sidebar-card palette-card">
+          <div class="palette-card-header">
+            <div>
+              <h3>Palette & Replacements</h3>
+              <p class="subtitle">Change colors without altering original image</p>
+            </div>
+            <button id="btn-reset-all-colors" class="btn btn-xs btn-ghost" title="Reset all colors to original">Reset All</button>
+          </div>
+
+          <!-- Highlight active color filter notice -->
+          <div id="color-filter-notice" class="color-filter-notice hidden">
+            <span>Filtering color:</span>
+            <span id="filtered-color-badge" class="filter-badge"></span>
+            <button id="btn-clear-filter" class="btn-clear-filter" title="Clear isolate filter">&times;</button>
+          </div>
+
+          <!-- Dynamic Palette List -->
+          <div class="palette-list" id="palette-list">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Project Info Card -->
+        <div class="sidebar-card info-card">
+          <div class="info-row">
+            <span class="info-label">Dimensions</span>
+            <span class="info-value" id="info-dimensions">0 × 0 px</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Color Count</span>
+            <span class="info-value" id="info-colors-count">0 colors</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Color Overrides</span>
+            <span class="info-value" id="info-overrides-count">0 modified</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Last Saved</span>
+            <span class="info-value" id="info-last-saved">Never</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Sidebar Backdrop for Mobile overlay -->
+      <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+    </main>
+
+    <!-- Bottom Tools Bar (Mobile & Desktop) -->
+    <nav class="bottom-toolbar" id="bottom-toolbar" aria-label="Tools Toolbar">
+      <!-- Core Tool Buttons -->
+      <div class="toolbar-section tools-group">
+        <!-- Move / Pan Tool (Default!) -->
+        <button id="tool-pan" class="tool-btn active" data-tool="pan" title="Move Image (Single touch / drag to move)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 11V6a2 2 0 0 0-4 0v5"></path>
+            <path d="M14 10V4a2 2 0 0 0-4 0v7"></path>
+            <path d="M10 10.5V6a2 2 0 0 0-4 0v8"></path>
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.83L7 15"></path>
+          </svg>
+          <span class="tool-label">Move</span>
+        </button>
+
+        <!-- Mark / Stitch Tool -->
+        <button id="tool-stitch" class="tool-btn" data-tool="stitch" title="Mark Pixel as Done (Tap pixel)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span class="tool-label">Mark</span>
+        </button>
+
+        <!-- Erase Tool -->
+        <button id="tool-erase" class="tool-btn" data-tool="erase" title="Erase Done Pixel (Tap pixel)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13.5L13.5 18 4 8.5 8.5 4 18 13.5z"></path>
+            <path d="M14 18l4-4"></path>
+          </svg>
+          <span class="tool-label">Erase</span>
+        </button>
+
+        <!-- Eyedropper / Pick Tool -->
+        <button id="tool-eyedropper" class="tool-btn" data-tool="eyedropper" title="Pick / Inspect Color">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l3 3-9 9-4 1 1-4 9-9z"></path>
+            <path d="M19 9l-3-3"></path>
+          </svg>
+          <span class="tool-label">Pick</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Quick Action Controls -->
+      <div class="toolbar-section actions-group">
+        <!-- Grid Toggle -->
+        <button id="btn-toggle-grid" class="tool-action-btn" title="Toggle Grid Lines">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+          </svg>
+          <span class="tool-label">Grid</span>
+        </button>
+
+        <!-- Done Settings Popover Toggle -->
+        <button id="btn-toggle-done-settings" class="tool-action-btn" title="Done Pixels Style & Settings">
+          <span id="btn-done-color-dot" class="color-dot-indicator" style="background-color: #10b981;"></span>
+          <span class="tool-label">Style</span>
+        </button>
+
+        <!-- Mobile Palette Drawer Trigger -->
+        <button id="btn-bottom-palette" class="tool-action-btn mobile-only" title="Color Palette & Progress">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+          </svg>
+          <span class="tool-label">Palette</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Zoom Controls -->
+      <div class="toolbar-section zoom-group">
+        <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out (-)" aria-label="Zoom Out">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <button id="btn-zoom-level" class="zoom-level-btn" title="Reset Zoom">
+          <span id="zoom-percentage-text">1600%</span>
+        </button>
+        <button id="btn-zoom-in" class="zoom-btn" title="Zoom In (+)" aria-label="Zoom In">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <button id="btn-fit-screen" class="zoom-btn" title="Fit to Screen (F)" aria-label="Fit to Screen">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Done Pixels Style Popover / Drawer -->
+    <div id="done-settings-popover" class="done-settings-popover hidden" role="dialog" aria-label="Done Pixel Style Settings">
+      <div class="popover-header">
+        <div class="popover-title-wrap">
+          <span class="popover-title">Done Pixels Style</span>
+        </div>
+        <div class="popover-actions">
+          <!-- Hide Completed Pixels Toggle -->
+          <button id="btn-toggle-hide" class="icon-toggle-btn" title="Hide/Show Completed Pixels (H)" aria-label="Toggle Completed Visibility">
+            <svg class="icon icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg class="icon icon-eye-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </button>
+          <button id="btn-close-done-settings" class="popover-close-btn" aria-label="Close Done Settings">&times;</button>
+        </div>
+      </div>
+
+      <div class="popover-body">
+        <!-- Completion Color Picker & Swatches -->
+        <div class="control-row">
+          <label class="control-label" for="complete-color-picker">Color</label>
+          <div class="color-picker-capsule">
+            <input type="color" id="complete-color-picker" value="#10b981" title="Select Done Pixel Color">
+            <span id="complete-color-preview" class="color-preview-circle" style="background-color: #10b981;"></span>
+            <span id="complete-color-value" class="color-hex-text">#10b981</span>
+          </div>
+        </div>
+
+        <!-- Color Quick Swatches -->
+        <div class="quick-swatches" id="complete-swatches">
+          <button class="swatch-btn" data-color="#10b981" style="--c: #10b981;" title="Emerald"></button>
+          <button class="swatch-btn" data-color="#3b82f6" style="--c: #3b82f6;" title="Blue"></button>
+          <button class="swatch-btn" data-color="#8b5cf6" style="--c: #8b5cf6;" title="Purple"></button>
+          <button class="swatch-btn" data-color="#ec4899" style="--c: #ec4899;" title="Pink"></button>
+          <button class="swatch-btn" data-color="#f59e0b" style="--c: #f59e0b;" title="Amber"></button>
+          <button class="swatch-btn" data-color="#ef4444" style="--c: #ef4444;" title="Red"></button>
+          <button class="swatch-btn" data-color="#ffffff" style="--c: #ffffff;" title="White"></button>
+          <button class="swatch-btn" data-color="#18181b" style="--c: #18181b;" title="Dark"></button>
+        </div>
+
+        <!-- Completion Opacity Slider -->
+        <div class="control-row">
+          <div class="control-label-flex">
+            <label for="complete-opacity-slider">Opacity</label>
+            <span id="complete-opacity-value" class="badge-value">70%</span>
+          </div>
+          <input type="range" id="complete-opacity-slider" min="10" max="100" value="70" step="5" class="range-slider">
+        </div>
+
+        <!-- Completion Style Mode -->
+        <div class="control-row">
+          <label class="control-label">Done Style</label>
+          <div class="mode-segmented-control" id="complete-mode-select">
+            <button class="mode-btn active" data-mode="tint" title="Translucent Tint">Tint</button>
+            <button class="mode-btn" data-mode="cross" title="Cross Stitch X">Stitch ✕</button>
+            <button class="mode-btn" data-mode="solid" title="Solid Color">Solid</button>
+            <button class="mode-btn" data-mode="dot" title="Center Dot">Dot •</button>
+          </div>
+        </div>
+
+        <div class="popover-divider"></div>
+
+        <!-- Canvas Fabric / Background Color (especially for PNGs) -->
+        <div class="control-row">
+          <label class="control-label" for="project-bg-color-picker">Canvas Fabric / Background</label>
+          <div class="color-picker-capsule">
+            <input type="color" id="project-bg-color-picker" value="#ffffff" title="Select Canvas Background Color">
+            <span id="project-bg-color-preview" class="color-preview-circle" style="background-color: #ffffff;"></span>
+            <span id="project-bg-color-value" class="color-hex-text">#ffffff</span>
+          </div>
+        </div>
+
+        <!-- Fabric Quick Swatches -->
+        <div class="quick-swatches" id="project-bg-swatches">
+          <button class="swatch-btn" data-bg="#ffffff" style="--c: #ffffff;" title="White Aida"></button>
+          <button class="swatch-btn" data-bg="#f5f5f0" style="--c: #f5f5f0;" title="Natural Linen"></button>
+          <button class="swatch-btn" data-bg="#18181b" style="--c: #18181b;" title="Charcoal Dark"></button>
+          <button class="swatch-btn" data-bg="#0f172a" style="--c: #0f172a;" title="Slate Navy"></button>
+          <button class="swatch-btn" data-bg="#fef3c7" style="--c: #fef3c7;" title="Vanilla Cream"></button>
+          <button class="swatch-btn" data-bg="#dbeafe" style="--c: #dbeafe;" title="Soft Sky Blue"></button>
+          <button class="swatch-btn" data-bg="transparent" style="--c: transparent; background: repeating-conic-gradient(#555 0% 25%, #333 0% 50%) 50% / 8px 8px;" title="Transparent Checkerboard"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODALS & DIALOGS                               -->
+    <!-- ============================================== -->
+
+    <!-- Projects Browser Modal -->
+    <div id="modal-projects" class="modal-backdrop hidden">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+            </svg>
+            <h2>My Cross Stitch Projects</h2>
+          </div>
+          <button class="modal-close-btn" data-close-modal="modal-projects">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-toolbar">
+            <button id="btn-modal-new-proj" class="btn btn-primary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Import / New Project</span>
+            </button>
+            <span class="projects-count" id="modal-projects-count">0 projects saved</span>
+          </div>
+
+          <div class="projects-grid" id="modal-projects-grid">
+            <!-- Project Cards populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Project / Import Modal -->
+    <div id="modal-new-project" class="modal-backdrop hidden">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <h2>Create New Project</h2>
+          </div>
+          <button class="modal-close-btn" data-close-modal="modal-new-project">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <form id="form-new-project">
+            <div class="form-group">
+              <label for="new-project-name" class="form-label">Project Name</label>
+              <input type="text" id="new-project-name" class="form-input" placeholder="e.g., Pixel Art Hero, Floral Pattern" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Choose Pixel Art Image</label>
+              
+              <!-- File Drag & Drop Zone -->
+              <div class="dropzone" id="image-dropzone">
+                <input type="file" id="file-input-image" accept="image/*" class="file-input-hidden">
+                <svg class="icon dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <div class="dropzone-text">
+                  <strong>Click to select file</strong> or drag & drop pixel art
+                </div>
+                <div class="dropzone-sub">Supports PNG, JPG, GIF, WebP (Ideal: 8×8 to 128×128)</div>
+              </div>
+
+              <!-- Selected Image Preview & Downsample Options -->
+              <div id="image-import-preview-box" class="import-preview-box hidden">
+                <div class="preview-img-container">
+                  <canvas id="import-preview-canvas" class="preview-canvas"></canvas>
+                </div>
+                <div class="preview-meta">
+                  <div id="preview-meta-dims" class="preview-meta-title">32 × 32 px</div>
+                  <div class="preview-downsample-opts">
+                    <label class="switch-label">
+                      <input type="checkbox" id="check-downsample">
+                      <span>Pixelate / Downsample to grid</span>
+                    </label>
+                    <select id="select-downsample-size" class="form-select mt-1" disabled>
+                      <option value="16">16 × 16 stitches</option>
+                      <option value="24">24 × 24 stitches</option>
+                      <option value="32" selected>32 × 32 stitches</option>
+                      <option value="48">48 × 48 stitches</option>
+                      <option value="64">64 × 64 stitches</option>
+                    </select>
+                  </div>
+
+                  <!-- Background / Fabric Color for PNGs -->
+                  <div class="preview-bg-opts mt-2">
+                    <label class="form-label-xs">Background / Fabric (for PNG)</label>
+                    <div class="bg-picker-row">
+                      <div class="color-picker-capsule compact">
+                        <input type="color" id="import-bg-color-picker" value="#ffffff" title="Select PNG Background Color">
+                        <span id="import-bg-color-preview" class="color-preview-circle" style="background-color: #ffffff;"></span>
+                        <span id="import-bg-color-value" class="color-hex-text">#ffffff</span>
+                      </div>
+                      <div class="quick-swatches compact" id="import-bg-swatches">
+                        <button type="button" class="swatch-btn active" data-bg="#ffffff" style="--c: #ffffff;" title="White Aida (Default)"></button>
+                        <button type="button" class="swatch-btn" data-bg="#f5f5f0" style="--c: #f5f5f0;" title="Natural Linen"></button>
+                        <button type="button" class="swatch-btn" data-bg="#18181b" style="--c: #18181b;" title="Charcoal Dark"></button>
+                        <button type="button" class="swatch-btn" data-bg="#0f172a" style="--c: #0f172a;" title="Slate Navy"></button>
+                        <button type="button" class="swatch-btn" data-bg="transparent" style="--c: transparent; background: repeating-conic-gradient(#555 0% 25%, #333 0% 50%) 50% / 8px 8px;" title="Transparent"></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Starter Presets Picker -->
+            <div class="form-group mt-3">
+              <label class="form-label">Or choose a starter template</label>
+              <div class="starter-templates-row" id="starter-templates-row">
+                <!-- Loaded via JS -->
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" data-close-modal="modal-new-project">Cancel</button>
+              <button type="submit" id="btn-submit-new-project" class="btn btn-primary" disabled>Create Project</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="modal-export" class="modal-backdrop hidden">
+      <div class="modal-dialog modal-md">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <h2>Export Project</h2>
+          </div>
+          <button class="modal-close-btn" data-close-modal="modal-export">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Export Type Selector Tabs -->
+          <div class="export-tabs">
+            <button class="export-tab active" data-export-type="edited">
+              <strong>Edited Image</strong>
+              <span>With changed colors, no stitch marks</span>
+            </button>
+            <button class="export-tab" data-export-type="completed">
+              <strong>Done / Progress</strong>
+              <span>With completed pixels marked</span>
+            </button>
+            <button class="export-tab" data-export-type="pattern">
+              <strong>Cross-Stitch Chart</strong>
+              <span>Printable grid chart with DMC legend</span>
+            </button>
+          </div>
+
+          <!-- Export Preview Box -->
+          <div class="export-preview-container">
+            <canvas id="export-preview-canvas" class="export-preview-canvas"></canvas>
+          </div>
+
+          <!-- Export Resolution & Options -->
+          <div class="export-options-grid">
+            <div class="form-group">
+              <label for="export-scale-select" class="form-label">Resolution Scale (Sharp Nearest-Neighbor)</label>
+              <select id="export-scale-select" class="form-select">
+                <option value="1">1× (Original Pixel Art Size)</option>
+                <option value="4">4× Scale</option>
+                <option value="8">8× Scale</option>
+                <option value="16" selected>16× Scale (Recommended for Viewing/Social)</option>
+                <option value="32">32× High-Res Scale</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="export-grid-option-group">
+              <label class="form-label">Options</label>
+              <label class="switch-label">
+                <input type="checkbox" id="export-include-grid">
+                <span>Overlay Pixel Stitch Grid</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" data-close-modal="modal-export">Close</button>
+            <button type="button" id="btn-do-export-download" class="btn btn-primary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download PNG</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Color Replacement Popover / Dialog -->
+    <div id="modal-color-replace" class="modal-backdrop hidden">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h3>Replace Color</h3>
+          </div>
+          <button class="modal-close-btn" data-close-modal="modal-color-replace">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="color-replace-comparison">
+            <div class="compare-item">
+              <span class="compare-label">Original</span>
+              <div id="replace-orig-swatch" class="swatch-large"></div>
+              <span id="replace-orig-hex" class="hex-text">#000000</span>
+            </div>
+            <div class="compare-arrow">➔</div>
+            <div class="compare-item">
+              <span class="compare-label">New Replacement</span>
+              <div id="replace-new-swatch" class="swatch-large"></div>
+              <span id="replace-new-hex" class="hex-text">#000000</span>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">Pick New Color</label>
+            <div class="custom-color-picker-input">
+              <input type="color" id="replace-color-native-input" value="#ff0000">
+              <input type="text" id="replace-color-text-input" class="form-input" value="#ff0000" maxlength="7">
+            </div>
+          </div>
+
+          <div class="quick-swatches mt-2" id="replace-swatches-row">
+            <!-- Quick color options -->
+          </div>
+
+          <div class="modal-actions mt-3">
+            <button type="button" id="btn-revert-single-color" class="btn btn-secondary">Revert to Original</button>
+            <button type="button" id="btn-apply-replace-color" class="btn btn-primary">Apply Replacement</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
