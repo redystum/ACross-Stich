@@ -1,7 +1,51 @@
-/* ==========================================================================
-   Across Stitch — Modern Neutral Design System & Stylesheet
-   Clean, Refined Monochrome & Neutral Palette for Web and Android Touch
-   ========================================================================== */
+/* Custom Sleek Scrollbars (Electron & Modern Browsers) */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html, body, * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+body.theme-light ::-webkit-scrollbar-thumb,
+body.theme-light *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+body.theme-light ::-webkit-scrollbar-thumb:hover,
+body.theme-light *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+body.theme-light, body.theme-light * {
+  scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+}
 
 :root {
   /* Typography */
@@ -569,6 +613,32 @@ body.theme-light .bottom-toolbar {
   display: none;
 }
 
+.desktop-only {
+  display: inline-flex;
+}
+
+/* Hide detach button and desktop-only elements on Android / touch / phone screens */
+@media (max-width: 900px) {
+  .desktop-only,
+  #btn-detach-canvas {
+    display: none !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .desktop-only,
+  #btn-detach-canvas {
+    display: none !important;
+  }
+}
+
+body.is-android .desktop-only,
+body.is-android #btn-detach-canvas,
+body.is-mobile .desktop-only,
+body.is-mobile #btn-detach-canvas {
+  display: none !important;
+}
+
 /* ==========================================================================
    Done Pixels Style Popover / Drawer
    ========================================================================== */
@@ -809,6 +879,11 @@ body.theme-light .bottom-toolbar {
   z-index: 20;
   overflow-y: auto;
   flex-shrink: 0;
+  transition: width var(--transition-smooth);
+}
+
+.sidebar-panel.collapsed {
+  display: none !important;
 }
 
 .sidebar-header-bar {
@@ -1790,3 +1865,57 @@ body.theme-light .bottom-toolbar {
     padding: 12px;
   }
 }
+
+/* Server Connection Button & Dot */
+.server-conn-btn {
+  position: relative;
+}
+
+.server-status-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-surface);
+  background-color: var(--accent-success);
+  transition: background-color 0.2s;
+}
+
+.server-status-dot.offline {
+  background-color: var(--accent-danger);
+}
+
+/* LAN IP Chips in Server Modal */
+.lan-ip-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.lan-ip-chip {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.lan-ip-chip:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+/* Detach Button Active State */
+#btn-detach-canvas.active {
+  color: var(--accent-primary);
+  background: rgba(16, 185, 129, 0.12);
+}
+

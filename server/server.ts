@@ -5,7 +5,11 @@ import { join } from "path";
 import { existsSync, statSync } from "fs";
 
 const PORT = Number(process.env.PORT) || 3000;
-const PUBLIC_DIR = join(import.meta.dir, "public");
+const HOST = process.env.HOST || "0.0.0.0"; // Listen on all network interfaces for Raspberry Pi
+const PUBLIC_DIR = process.env.PUBLIC_DIR || 
+  (existsSync(join(import.meta.dir, "..", "public")) 
+    ? join(import.meta.dir, "..", "public") 
+    : join(import.meta.dir, "public"));
 
 // Seed default samples if no projects exist
 function seedIfEmpty() {
@@ -18,7 +22,7 @@ function seedIfEmpty() {
       height: heart.height,
       originalImage: heart.originalImage,
       changedColors: {
-        "#e11d48": "#10b981", // Replaced red with emerald to show color replacement in action!
+        "#e11d48": "#10b981",
       },
       completedPixels: heart.completedPixels,
       completeStyle: {
@@ -27,6 +31,7 @@ function seedIfEmpty() {
         mode: "cross",
         hideCompleted: false,
       },
+      backgroundColor: "#ffffff",
     });
 
     const potion = getSamplePotion();
@@ -43,6 +48,7 @@ function seedIfEmpty() {
         mode: "tint",
         hideCompleted: false,
       },
+      backgroundColor: "#ffffff",
     });
 
     const cat = getSampleCat();
@@ -52,26 +58,27 @@ function seedIfEmpty() {
       height: cat.height,
       originalImage: cat.originalImage,
       changedColors: {
-        "#f97316": "#8b5cf6", // Purple cat replacement!
+        "#f97316": "#8b5cf6",
       },
       completedPixels: cat.completedPixels,
       completeStyle: {
         color: "#ec4899",
         opacity: 0.8,
-        mode: "tint",
+        mode: "solid",
         hideCompleted: false,
       },
+      backgroundColor: "#ffffff",
     });
-    console.log("Seeded 3 starter projects successfully.");
+    console.log("Seeding complete. 3 starter templates ready.");
   }
 }
 
 seedIfEmpty();
 
-// Helper to get local network IPv4 addresses
-function getLocalIps(): string[] {
-  const ips: string[] = [];
+// Helper to get local network IP addresses
+function getLanIpAddresses(): string[] {
   const nets = networkInterfaces();
+  const ips: string[] = [];
   for (const name of Object.keys(nets)) {
     for (const net of nets[name] || []) {
       if (net.family === "IPv4" && !net.internal) {
@@ -118,9 +125,9 @@ function corsHeaders() {
 }
 
 // Start Bun HTTP Server
-const server = Bun.serve({
+export const server = Bun.serve({
   port: PORT,
-  hostname: process.env.HOST || "0.0.0.0",
+  hostname: HOST,
   async fetch(req) {
     const url = new URL(req.url);
     const method = req.method;
@@ -139,12 +146,12 @@ const server = Bun.serve({
 
     // GET /api/network-info
     if (url.pathname === "/api/network-info" && method === "GET") {
-      const ips = getLocalIps();
+      const lanIps = getLanIpAddresses();
       return jsonResponse({
         port: PORT,
-        localIps: ips,
-        urls: ips.map((ip) => `http://${ip}:${PORT}`),
-        localhost: `http://localhost:${PORT}`,
+        lanIps,
+        primaryUrl: lanIps.length > 0 ? `http://${lanIps[0]}:${PORT}` : `http://localhost:${PORT}`,
+        urls: lanIps.map(ip => `http://${ip}:${PORT}`),
       });
     }
 
@@ -157,12 +164,8 @@ const server = Bun.serve({
 
     // GET /api/projects - list all projects
     if (url.pathname === "/api/projects" && method === "GET") {
-      try {
-        const list = projectRepository.getAll();
-        return jsonResponse(list);
-      } catch (err: any) {
-        return jsonResponse({ error: err.message }, 500);
-      }
+      const list = projectRepository.getAll();
+      return jsonResponse(list);
     }
 
     // POST /api/projects - create new project
@@ -240,51 +243,50 @@ const server = Bun.serve({
 
       // DELETE /api/projects/:id
       if (method === "DELETE") {
-        const ok = projectRepository.delete(projectId);
-        if (!ok) return jsonResponse({ error: "Project not found" }, 404);
-        return jsonResponse({ success: true, id: projectId });
+        const success = projectRepository.delete(projectId);
+        if (!success) return jsonResponse({ error: "Project not found" }, 404);
+        return jsonResponse({ success: true, message: "Project deleted" });
       }
     }
 
     // ==========================================
     // STATIC FILE SERVING
     // ==========================================
-    let filePath = url.pathname === "/" ? "/index.html" : url.pathname;
-    // Security check to avoid path traversal
-    filePath = join(PUBLIC_DIR, filePath.replace(/^\/+/, ""));
+    let reqPath = url.pathname === "/" ? "/index.html" : url.pathname;
+    // Security check to prevent directory traversal
+    const safePath = join(PUBLIC_DIR, reqPath);
+    if (!safePath.startsWith(PUBLIC_DIR)) {
+      return new Response("Forbidden", { status: 403, headers: corsHeaders() });
+    }
 
-    if (existsSync(filePath) && statSync(filePath).isFile()) {
-      const ext = filePath.substring(filePath.lastIndexOf("."));
+    if (existsSync(safePath) && statSync(safePath).isFile()) {
+      const extMatch = safePath.match(/\.[^.]+$/);
+      const ext = extMatch ? extMatch[0].toLowerCase() : "";
       const contentType = MIME_TYPES[ext] || "application/octet-stream";
-      const file = Bun.file(filePath);
+      const file = Bun.file(safePath);
       return new Response(file, {
         headers: {
           "Content-Type": contentType,
-          "Cache-Control": "no-cache",
+          "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=3600",
           ...corsHeaders(),
         },
       });
     }
 
-    // Fallback to index.html for SPA if client side route
-    const indexHtml = join(PUBLIC_DIR, "index.html");
-    if (existsSync(indexHtml)) {
-      return new Response(Bun.file(indexHtml), {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          ...corsHeaders(),
-        },
-      });
-    }
-
-    return new Response("Not Found", { status: 404 });
+    // 404 Not Found
+    return new Response("Not Found", { status: 404, headers: corsHeaders() });
   },
 });
 
-const localIps = getLocalIps();
-console.log(`\n🧵 Across Stitch Server active on port ${PORT}`);
-console.log(`🖥️  PC Web Client:       http://localhost:${PORT}`);
-for (const ip of localIps) {
-  console.log(`📱 Android / LAN Client: http://${ip}:${PORT}`);
+console.log(`\n======================================================`);
+console.log(`🧵 Across Stitch Server Running for Raspberry Pi & LAN`);
+console.log(`======================================================`);
+console.log(`Local Access:   http://localhost:${PORT}`);
+const lanIps = getLanIpAddresses();
+if (lanIps.length > 0) {
+  lanIps.forEach(ip => {
+    console.log(`LAN Device:     http://${ip}:${PORT}`);
+  });
 }
-console.log(`🤖 Android Emulator:     http://10.0.2.2:${PORT}\n`);
+console.log(`Public Assets:  ${PUBLIC_DIR}`);
+console.log(`Ready for PC App, Web, and Mobile Clients.\n`);

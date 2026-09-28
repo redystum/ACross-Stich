@@ -56,7 +56,38 @@ const state = {
   
   // Color replace dialog state
   activeReplaceOriginalHex: null,
+
+  // Detached Window State
+  pipWindow: null,
+  popupWindow: null,
+  isDetached: false,
 };
+
+// ============================================================================
+// Server Connection & API Client (Raspberry Pi & LAN support)
+// ============================================================================
+
+function getApiBaseUrl() {
+  const custom = localStorage.getItem('across_stitch_server_url');
+  if (custom && custom.trim()) {
+    return custom.trim().replace(/\/+$/, '');
+  }
+  return '';
+}
+
+function setApiBaseUrl(url) {
+  if (url && url.trim()) {
+    localStorage.setItem('across_stitch_server_url', url.trim().replace(/\/+$/, ''));
+  } else {
+    localStorage.removeItem('across_stitch_server_url');
+  }
+}
+
+async function apiFetch(path, options = {}) {
+  const base = getApiBaseUrl();
+  const url = base ? `${base}${path.startsWith('/') ? path : '/' + path}` : path;
+  return fetch(url, options);
+}
 
 // DOM Element References Cache
 const dom = {};
@@ -76,6 +107,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function cacheDOMElements() {
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isMobile = isAndroid || /iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window && !window.electronAPI);
+  if (isAndroid) document.body.classList.add('is-android');
+  if (isMobile) document.body.classList.add('is-mobile');
+
   dom.app = document.getElementById('app');
   dom.projectNameInput = document.getElementById('project-name-input');
   dom.saveStatusBadge = document.getElementById('save-status-badge');
@@ -112,6 +148,19 @@ function cacheDOMElements() {
   dom.projectBgColorPreview = document.getElementById('project-bg-color-preview');
   dom.projectBgColorValue = document.getElementById('project-bg-color-value');
   dom.projectBgSwatches = document.getElementById('project-bg-swatches');
+
+  // Detach Canvas Button
+  dom.btnDetachCanvas = document.getElementById('btn-detach-canvas');
+
+  // Server Connection Controls (Raspberry Pi)
+  dom.btnServerConnect = document.getElementById('btn-server-connect');
+  dom.headerServerDot = document.getElementById('header-server-dot');
+  dom.modalServer = document.getElementById('modal-server');
+  dom.inputServerUrl = document.getElementById('input-server-url');
+  dom.serverStatusMessage = document.getElementById('server-status-message');
+  dom.lanIpChips = document.getElementById('lan-ip-chips');
+  dom.btnTestServerConnection = document.getElementById('btn-test-server-connection');
+  dom.btnSaveServerConnection = document.getElementById('btn-save-server-connection');
 
   // Canvas
   dom.canvasViewport = document.getElementById('canvas-viewport');
@@ -234,14 +283,15 @@ function toggleTheme() {
 
 async function fetchNetworkInfo() {
   try {
-    const res = await fetch('/api/network-info');
+    const res = await apiFetch('/api/network-info');
     if (res.ok) {
       const data = await res.json();
       state.networkInfo = data;
       if (dom.footerLanIp) {
-        if (data.localIps && data.localIps.length > 0) {
-          dom.footerLanIp.textContent = `Android: http://${data.localIps[0]}:${data.port}`;
-          dom.footerLanIp.title = `Access from Android device or Emulator:\n${data.urls.join('\n')}\nEmulator: http://10.0.2.2:${data.port}`;
+        const ips = data.lanIps || data.localIps || [];
+        if (ips.length > 0) {
+          dom.footerLanIp.textContent = `Pi/LAN: http://${ips[0]}:${data.port}`;
+          dom.footerLanIp.title = `Access from Raspberry Pi, PC, or Android:\n${data.urls ? data.urls.join('\n') : ips.join('\n')}`;
         } else {
           dom.footerLanIp.textContent = `http://localhost:${data.port}`;
         }
@@ -255,6 +305,9 @@ async function fetchNetworkInfo() {
 
 function setServerStatus(online) {
   state.serverOnline = online;
+  if (dom.headerServerDot) {
+    dom.headerServerDot.className = online ? 'server-status-dot online' : 'server-status-dot offline';
+  }
   if (dom.footerServerStatus) {
     if (online) {
       dom.footerServerStatus.textContent = 'Server Connected';
@@ -264,6 +317,90 @@ function setServerStatus(online) {
       dom.footerServerStatus.className = 'footer-item offline';
     }
   }
+}
+
+function openServerModal() {
+  const currentUrl = getApiBaseUrl() || window.location.origin;
+  if (dom.inputServerUrl) dom.inputServerUrl.value = getApiBaseUrl() || '';
+  if (dom.serverStatusMessage) dom.serverStatusMessage.textContent = `Current: ${currentUrl}`;
+
+  // Populate LAN chips
+  if (dom.lanIpChips) {
+    dom.lanIpChips.innerHTML = '';
+    const ips = state.networkInfo?.lanIps || state.networkInfo?.localIps || [];
+    const port = state.networkInfo?.port || 3000;
+    
+    // Add localhost chip
+    const localChip = document.createElement('button');
+    localChip.type = 'button';
+    localChip.className = 'lan-ip-chip';
+    localChip.textContent = `http://localhost:${port}`;
+    localChip.addEventListener('click', () => {
+      dom.inputServerUrl.value = `http://localhost:${port}`;
+    });
+    dom.lanIpChips.appendChild(localChip);
+
+    // Add hostname / Pi chip
+    const piChip = document.createElement('button');
+    piChip.type = 'button';
+    piChip.className = 'lan-ip-chip';
+    piChip.textContent = `http://raspberrypi.local:${port}`;
+    piChip.addEventListener('click', () => {
+      dom.inputServerUrl.value = `http://raspberrypi.local:${port}`;
+    });
+    dom.lanIpChips.appendChild(piChip);
+
+    ips.forEach(ip => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'lan-ip-chip';
+      chip.textContent = `http://${ip}:${port}`;
+      chip.addEventListener('click', () => {
+        dom.inputServerUrl.value = `http://${ip}:${port}`;
+      });
+      dom.lanIpChips.appendChild(chip);
+    });
+  }
+
+  openModal('modal-server');
+}
+
+async function testServerConnection() {
+  const url = dom.inputServerUrl?.value.trim();
+  const testUrl = url ? `${url.replace(/\/+$/, '')}/api/network-info` : '/api/network-info';
+  
+  if (dom.serverStatusMessage) {
+    dom.serverStatusMessage.textContent = 'Testing connection...';
+    dom.serverStatusMessage.style.color = 'var(--text-secondary)';
+  }
+
+  try {
+    const res = await fetch(testUrl, { method: 'GET', signal: AbortSignal.timeout(3500) });
+    if (res.ok) {
+      if (dom.serverStatusMessage) {
+        dom.serverStatusMessage.textContent = '✓ Successfully connected to Raspberry Pi server!';
+        dom.serverStatusMessage.style.color = 'var(--accent-success)';
+      }
+      showToast('Connected to server successfully', 'success');
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
+  } catch (e) {
+    if (dom.serverStatusMessage) {
+      dom.serverStatusMessage.textContent = `✗ Connection failed: ${e.message}`;
+      dom.serverStatusMessage.style.color = 'var(--accent-danger)';
+    }
+    showToast(`Connection failed: ${e.message}`, 'error');
+  }
+}
+
+async function saveServerConnection() {
+  const url = dom.inputServerUrl?.value.trim();
+  setApiBaseUrl(url);
+  closeModal('modal-server');
+  showToast(`Server URL set to: ${url || 'Local origin'}`, 'success');
+  await fetchNetworkInfo();
+  await loadInitialProject();
 }
 
 // ============================================================================
@@ -532,7 +669,7 @@ function updateZoomUI() {
 
 async function loadInitialProject() {
   try {
-    const res = await fetch('/api/projects');
+    const res = await apiFetch('/api/projects');
     if (res.ok) {
       const list = await res.json();
       if (list.length > 0) {
@@ -549,7 +686,7 @@ async function loadInitialProject() {
 async function openProject(projectId) {
   try {
     showToast('Loading project...', 'info');
-    const res = await fetch(`/api/projects/${projectId}`);
+    const res = await apiFetch(`/api/projects/${projectId}`);
     if (!res.ok) throw new Error('Project not found');
 
     const project = await res.json();
@@ -595,6 +732,7 @@ function setProject(project) {
     rebuildPalette();
     updateProgressUI();
     renderCanvas();
+    broadcastStateToDetached();
   });
 }
 
@@ -795,6 +933,7 @@ function toggleColorFilter(originalHex) {
   }
   rebuildPalette();
   renderCanvas();
+  broadcastStateToDetached();
 }
 
 function markAllOfColor(originalHex) {
@@ -977,15 +1116,40 @@ function setupEventListeners() {
   dom.btnExport.addEventListener('click', openExportModal);
 
   // Toggle Sidebar Drawer (Mobile & Desktop)
+  const updateMainCanvasLayout = () => {
+    resizeCanvas();
+    renderCanvas();
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      renderCanvas();
+    });
+    setTimeout(() => {
+      resizeCanvas();
+      renderCanvas();
+    }, 60);
+  };
+
   const toggleSidebar = () => {
-    const isOpen = dom.sidebarPanel?.classList.toggle('open');
-    if (dom.sidebarBackdrop) {
-      dom.sidebarBackdrop.classList.toggle('hidden', !isOpen);
+    if (window.innerWidth <= 900) {
+      const isOpen = dom.sidebarPanel?.classList.toggle('open');
+      if (dom.sidebarBackdrop) {
+        dom.sidebarBackdrop.classList.toggle('hidden', !isOpen);
+      }
+    } else {
+      const isCollapsed = dom.sidebarPanel?.classList.toggle('collapsed');
+      dom.btnToggleSidebar?.classList.toggle('active', !isCollapsed);
+      updateMainCanvasLayout();
     }
   };
   const closeSidebar = () => {
-    dom.sidebarPanel?.classList.remove('open');
-    dom.sidebarBackdrop?.classList.add('hidden');
+    if (window.innerWidth <= 900) {
+      dom.sidebarPanel?.classList.remove('open');
+      dom.sidebarBackdrop?.classList.add('hidden');
+    } else {
+      dom.sidebarPanel?.classList.add('collapsed');
+      dom.btnToggleSidebar?.classList.remove('active');
+      updateMainCanvasLayout();
+    }
   };
 
   dom.btnToggleSidebar?.addEventListener('click', toggleSidebar);
@@ -1127,6 +1291,30 @@ function setupEventListeners() {
     dom.colorFilterNotice.classList.add('hidden');
     rebuildPalette();
     renderCanvas();
+    broadcastStateToDetached();
+  });
+
+  // Server Connection Settings Modal
+  dom.btnServerConnect?.addEventListener('click', openServerModal);
+  dom.btnTestServerConnection?.addEventListener('click', testServerConnection);
+  dom.btnSaveServerConnection?.addEventListener('click', saveServerConnection);
+
+  // Detach Canvas Button (Always on Top)
+  dom.btnDetachCanvas?.addEventListener('click', openDetachedWindow);
+
+  // Detached Window Sync Listeners (Electron IPC & Browser Messages)
+  if (window.electronAPI) {
+    window.electronAPI.onActionFromDetached((action) => {
+      handleDetachedAction(action);
+    });
+  }
+
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'DETACHED_ACTION') {
+      handleDetachedAction(e.data.action);
+    } else if (e.data && e.data.type === 'DETACHED_READY') {
+      broadcastStateToDetached();
+    }
   });
 
   // Reset All Colors
@@ -1252,6 +1440,7 @@ function toggleHideCompleted() {
   syncCompletionControlsUI();
   markUnsaved();
   renderCanvas();
+  broadcastStateToDetached();
   showToast(state.currentProject.completeStyle.hideCompleted ? 'Completed pixels hidden' : 'Completed pixels visible', 'info');
 }
 
@@ -1266,6 +1455,7 @@ function setCompletionColor(hex) {
   }
   markUnsaved();
   renderCanvas();
+  broadcastStateToDetached();
 }
 
 function setProjectBackgroundColor(hex) {
@@ -1274,6 +1464,7 @@ function setProjectBackgroundColor(hex) {
   syncProjectBackgroundUI();
   markUnsaved();
   renderCanvas();
+  broadcastStateToDetached();
 }
 
 function syncProjectBackgroundUI() {
@@ -1391,6 +1582,7 @@ function switchTool(tool) {
     b.classList.toggle('active', b.dataset.tool === tool);
   });
   updateCursorStyle();
+  broadcastStateToDetached();
 }
 
 function adjustZoom(factor) {
@@ -1762,6 +1954,7 @@ function handleEyedropper(pixel) {
 
 function syncCompletedPixelsState() {
   state.currentProject.completedPixels = Array.from(state.completedSet);
+  broadcastStateToDetached();
 }
 
 function updateHUD(pixel) {
@@ -1833,7 +2026,7 @@ async function saveProjectToServer() {
       backgroundColor: state.currentProject.backgroundColor || '#ffffff',
     };
 
-    const res = await fetch(`/api/projects/${state.currentProject.id}`, {
+    const res = await apiFetch(`/api/projects/${state.currentProject.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1862,7 +2055,7 @@ async function openProjectsModal() {
   dom.modalProjectsGrid.innerHTML = '<div style="color:var(--text-tertiary);padding:20px;">Loading projects...</div>';
 
   try {
-    const res = await fetch('/api/projects');
+    const res = await apiFetch('/api/projects');
     if (!res.ok) throw new Error('Failed to fetch projects');
     const projects = await res.json();
 
@@ -1926,7 +2119,7 @@ async function openProjectsModal() {
 
 async function duplicateProject(projectId) {
   try {
-    const res = await fetch(`/api/projects/${projectId}/duplicate`, { method: 'POST' });
+    const res = await apiFetch(`/api/projects/${projectId}/duplicate`, { method: 'POST' });
     if (!res.ok) throw new Error('Duplicate failed');
     const copy = await res.json();
     showToast(`Duplicated as "${copy.name}"`, 'success');
@@ -1938,7 +2131,7 @@ async function duplicateProject(projectId) {
 
 async function deleteProject(projectId) {
   try {
-    const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/projects/${projectId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Delete failed');
     showToast('Project deleted', 'info');
 
@@ -1976,7 +2169,7 @@ async function loadStarterTemplates() {
   if (!dom.starterTemplatesRow) return;
   dom.starterTemplatesRow.innerHTML = '';
   try {
-    const res = await fetch('/api/samples');
+    const res = await apiFetch('/api/samples');
     if (res.ok) {
       const data = await res.json();
       data.samples.forEach(sample => {
@@ -2126,7 +2319,7 @@ async function handleCreateNewProject() {
       backgroundColor: state.importBgColor || '#ffffff',
     };
 
-    const res = await fetch('/api/projects', {
+    const res = await apiFetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -2406,3 +2599,498 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 200);
   }, 2400);
 }
+
+// ============================================================================
+// Detached Always-On-Top Window Engine (Electron & Browser PiP)
+// ============================================================================
+
+function getDetachedState() {
+  if (!state.currentProject) return null;
+  return {
+    id: state.currentProject.id,
+    name: state.currentProject.name,
+    width: state.currentProject.width,
+    height: state.currentProject.height,
+    originalImage: state.currentProject.originalImage,
+    changedColors: state.currentProject.changedColors || {},
+    completedPixels: Array.from(state.completedSet || []),
+    completeStyle: state.currentProject.completeStyle || {
+      color: '#10b981',
+      opacity: 0.7,
+      mode: 'tint',
+      hideCompleted: false,
+    },
+    backgroundColor: state.currentProject.backgroundColor || '#ffffff',
+    activeTool: state.activeTool,
+    filterColor: state.filterColor,
+  };
+}
+
+function broadcastStateToDetached() {
+  const ds = getDetachedState();
+  if (!ds) return;
+
+  // 1. Electron Desktop IPC
+  if (window.electronAPI) {
+    window.electronAPI.sendStateToDetached(ds);
+  }
+
+  // 2. Browser Document Picture-in-Picture
+  if (state.pipWindow && !state.pipWindow.closed) {
+    state.pipWindow.postMessage({ type: 'SYNC_STATE', payload: ds }, '*');
+    if (typeof state.pipUpdateCanvas === 'function') {
+      state.pipUpdateCanvas(ds);
+    }
+  }
+
+  // 3. Browser Popup Window fallback
+  if (state.popupWindow && !state.popupWindow.closed) {
+    state.popupWindow.postMessage({ type: 'SYNC_STATE', payload: ds }, '*');
+  }
+}
+
+function handleDetachedAction(action) {
+  if (!action || action.type !== 'toggle_pixel') return;
+  if (!state.currentProject) return;
+
+  const key = action.key || `${action.x},${action.y}`;
+  if (action.completed) {
+    state.completedSet.add(key);
+  } else {
+    state.completedSet.delete(key);
+  }
+
+  syncCompletedPixelsState();
+  rebuildPalette();
+  updateProgressUI();
+  renderCanvas();
+  markUnsaved();
+  broadcastStateToDetached();
+}
+
+async function openDetachedWindow() {
+  if (!state.currentProject) {
+    showToast('Open a project first before detaching', 'info');
+    return;
+  }
+
+  const ds = getDetachedState();
+
+  // Mode 1: Electron PC Desktop App (Native Always-on-Top BrowserWindow)
+  if (window.electronAPI) {
+    try {
+      await window.electronAPI.openDetachedWindow(ds);
+      dom.btnDetachCanvas?.classList.add('active');
+      showToast('Image detached to Always-On-Top window', 'success');
+      return;
+    } catch (e) {
+      console.warn('Electron detach failed, falling back:', e);
+    }
+  }
+
+  // Mode 2: Modern Browser Document Picture-in-Picture API (Always-on-Top in Chrome/Edge!)
+  if ('documentPictureInPicture' in window) {
+    try {
+      if (state.pipWindow && !state.pipWindow.closed) {
+        state.pipWindow.focus();
+        return;
+      }
+
+      const pip = await window.documentPictureInPicture.requestWindow({
+        width: 480,
+        height: 520,
+      });
+      state.pipWindow = pip;
+      dom.btnDetachCanvas?.classList.add('active');
+
+      setupBrowserPiPWindow(pip);
+      showToast('Detached to Always-On-Top floating window', 'success');
+      return;
+    } catch (e) {
+      console.warn('Document Picture-in-Picture error:', e);
+    }
+  }
+
+  // Mode 3: Browser Popup Window fallback
+  const w = 480;
+  const h = 520;
+  const left = window.screen.width - w - 40;
+  const top = 100;
+  state.popupWindow = window.open(
+    '/detached.html',
+    'AcrossStitchDetached',
+    `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+  );
+  dom.btnDetachCanvas?.classList.add('active');
+  showToast('Detached into floating window', 'info');
+}
+
+function setupBrowserPiPWindow(pipWin) {
+  // Copy styles
+  document.querySelectorAll('link[rel="stylesheet"], style').forEach((styleSheet) => {
+    pipWin.document.head.appendChild(styleSheet.cloneNode(true));
+  });
+
+  const link = pipWin.document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/detached.css';
+  pipWin.document.head.appendChild(link);
+
+  pipWin.document.body.className = document.body.className || 'theme-dark';
+  pipWin.document.body.innerHTML = `
+    <div class="detached-container">
+      <header class="detached-header">
+        <div class="drag-region">
+          <span class="app-icon">🧵</span>
+          <span class="project-title" id="pip-project-title">${state.currentProject?.name || 'Detached View'}</span>
+          <div class="tool-pill" id="pip-tool-pill">
+            <span class="tool-dot" id="pip-tool-dot" style="background-color: ${state.currentProject?.completeStyle?.color || '#10b981'};"></span>
+            <span class="tool-label" id="pip-tool-label">${capitalize(state.activeTool)}</span>
+          </div>
+        </div>
+        <div class="window-controls no-drag">
+          <button class="win-btn" id="pip-btn-toggle-bars" title="Hide Bars for Pure Canvas (Tab or H)">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 14 10 14 10 20"></polyline>
+              <polyline points="20 10 14 10 14 4"></polyline>
+              <line x1="14" y1="10" x2="21" y2="3"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+          </button>
+          <button class="win-btn" id="pip-btn-grid" title="Toggle Grid Lines">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <path d="M3 9h18M3 15h18M9 3v18M15 3v18"></path>
+            </svg>
+          </button>
+          <button class="win-btn" id="pip-btn-fit" title="Fit to Window">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+          </button>
+          <button class="win-btn close" id="pip-btn-close" title="Close">
+            <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <main class="detached-viewport" id="pip-viewport">
+        <canvas id="pip-canvas"></canvas>
+        <button class="floating-show-bars-btn" id="pip-btn-show-bars" title="Show Bars (Tab or H)">
+          <svg class="icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+      </main>
+      <footer class="detached-footer">
+        <div class="footer-left">
+          <span class="stat-progress" id="pip-stat-progress">0%</span>
+          <span class="stat-counts" id="pip-stat-counts">0 / 0</span>
+        </div>
+        <div class="footer-right">
+          <span class="stat-coords" id="pip-stat-coords">--:--</span>
+          <span class="stat-hint">R-Click: Pan | L-Click: Stitch</span>
+        </div>
+      </footer>
+    </div>
+  `;
+
+  bindPiPCanvas(pipWin);
+
+  pipWin.addEventListener('pagehide', () => {
+    state.pipWindow = null;
+    dom.btnDetachCanvas?.classList.remove('active');
+  });
+}
+
+function bindPiPCanvas(pipWin) {
+  const canvas = pipWin.document.getElementById('pip-canvas');
+  const viewport = pipWin.document.getElementById('pip-viewport');
+  const title = pipWin.document.getElementById('pip-project-title');
+  const toolLabel = pipWin.document.getElementById('pip-tool-label');
+  const toolDot = pipWin.document.getElementById('pip-tool-dot');
+  const statProgress = pipWin.document.getElementById('pip-stat-progress');
+  const statCounts = pipWin.document.getElementById('pip-stat-counts');
+  const statCoords = pipWin.document.getElementById('pip-stat-coords');
+
+  if (!canvas || !viewport) return;
+  const ctx = canvas.getContext('2d');
+
+  let pZoom = 16;
+  let pPanX = 0;
+  let pPanY = 0;
+  let pIsPanning = false;
+  let pIsDrawing = false;
+  let pLastMouseX = 0;
+  let pLastMouseY = 0;
+  let pLastMarked = null;
+
+  function resizePiPCanvas() {
+    const rect = viewport.getBoundingClientRect();
+    const dpr = pipWin.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+  }
+
+  function fitPiP() {
+    if (!state.currentProject) return;
+    const rect = viewport.getBoundingClientRect();
+    const pad = 24;
+    const availW = Math.max(50, rect.width - pad * 2);
+    const availH = Math.max(50, rect.height - pad * 2);
+    pZoom = Math.max(1, Math.min(64, Math.min(availW / state.currentProject.width, availH / state.currentProject.height)));
+    pPanX = 0;
+    pPanY = 0;
+    drawPiPCanvas();
+  }
+
+  function drawPiPCanvas() {
+    if (!state.currentProject || !state.pixelMatrix.length) return;
+    const rect = viewport.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+
+    ctx.save();
+    ctx.setTransform(pipWin.devicePixelRatio || 1, 0, 0, pipWin.devicePixelRatio || 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.translate(w / 2 + pPanX, h / 2 + pPanY);
+    ctx.scale(pZoom, pZoom);
+
+    const imgW = state.currentProject.width;
+    const imgH = state.currentProject.height;
+    const sX = -imgW / 2;
+    const sY = -imgH / 2;
+
+    // Background
+    const bg = state.currentProject.backgroundColor || '#ffffff';
+    if (bg === 'transparent') {
+      drawCheckerboard(ctx, sX, sY, imgW, imgH);
+    } else {
+      ctx.fillStyle = bg;
+      ctx.fillRect(sX, sY, imgW, imgH);
+    }
+
+    // Pixels
+    const changedColors = state.currentProject.changedColors || {};
+    const isFiltering = !!state.filterColor;
+    const targetFilter = state.filterColor ? state.filterColor.toLowerCase() : null;
+
+    for (let y = 0; y < imgH; y++) {
+      for (let x = 0; x < imgW; x++) {
+        const origHex = state.pixelMatrix[y]?.[x];
+        if (!origHex) continue;
+
+        const effectiveHex = changedColors[origHex] || origHex;
+        const matches = !isFiltering || origHex.toLowerCase() === targetFilter;
+        ctx.fillStyle = effectiveHex;
+        ctx.globalAlpha = matches ? 1.0 : 0.18;
+        ctx.fillRect(sX + x, sY + y, 1, 1);
+      }
+    }
+
+    // Completed marks
+    const cs = state.currentProject.completeStyle || { color: '#10b981', opacity: 0.7, mode: 'tint' };
+    if (!cs.hideCompleted && state.completedSet.size > 0) {
+      for (const key of state.completedSet) {
+        const parts = key.split(',');
+        const x = Number(parts[0]);
+        const y = Number(parts[1]);
+        if (!state.pixelMatrix[y]?.[x]) continue;
+
+        const pixelX = sX + x;
+        const pixelY = sY + y;
+
+        ctx.save();
+        ctx.globalAlpha = cs.opacity !== undefined ? cs.opacity : 0.7;
+        ctx.fillStyle = cs.color;
+        if (cs.mode === 'tint' || cs.mode === 'solid') {
+          ctx.fillRect(pixelX, pixelY, 1, 1);
+        } else if (cs.mode === 'cross') {
+          ctx.strokeStyle = cs.color;
+          ctx.lineWidth = 0.16;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(pixelX + 0.18, pixelY + 0.18);
+          ctx.lineTo(pixelX + 0.82, pixelY + 0.82);
+          ctx.moveTo(pixelX + 0.82, pixelY + 0.18);
+          ctx.lineTo(pixelX + 0.18, pixelY + 0.82);
+          ctx.stroke();
+        } else if (cs.mode === 'dot') {
+          ctx.beginPath();
+          ctx.arc(pixelX + 0.5, pixelY + 0.5, 0.28, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    // Grid lines
+    if (state.showGrid && pZoom >= 4) {
+      ctx.lineWidth = 1 / pZoom;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.beginPath();
+      for (let x = 0; x <= imgW; x++) {
+        ctx.moveTo(sX + x, sY);
+        ctx.lineTo(sX + x, sY + imgH);
+      }
+      for (let y = 0; y <= imgH; y++) {
+        ctx.moveTo(sX, sY + y);
+        ctx.lineTo(sX + imgW, sY + y);
+      }
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function piPScreenToPixel(sx, sy) {
+    if (!state.currentProject) return null;
+    const rect = viewport.getBoundingClientRect();
+    const cx = sx - rect.left;
+    const cy = sy - rect.top;
+    const wx = (cx - (rect.width / 2 + pPanX)) / pZoom;
+    const wy = (cy - (rect.height / 2 + pPanY)) / pZoom;
+    const px = Math.floor(wx + state.currentProject.width / 2);
+    const py = Math.floor(wy + state.currentProject.height / 2);
+    if (px >= 0 && px < state.currentProject.width && py >= 0 && py < state.currentProject.height) {
+      return { x: px, y: py };
+    }
+    return null;
+  }
+
+  function applyPiPStitch(px, py) {
+    if (!state.currentProject || !state.pixelMatrix.length) return;
+    const origHex = state.pixelMatrix[py]?.[px];
+    if (!origHex) return;
+    if (state.filterColor && origHex.toLowerCase() !== state.filterColor.toLowerCase()) return;
+
+    const key = `${px},${py}`;
+    const shouldComplete = state.activeTool !== 'erase';
+    handleDetachedAction({ type: 'toggle_pixel', x: px, y: py, key, completed: shouldComplete });
+    drawPiPCanvas();
+  }
+
+  // Prevent right-click context menu so right-click can pan
+  viewport.addEventListener('contextmenu', (e) => e.preventDefault());
+  pipWin.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Pointer events on PiP
+  viewport.addEventListener('pointerdown', (e) => {
+    // Right click (2), Middle click (1), or pan tool = Pan
+    if (e.button === 2 || e.button === 1 || state.activeTool === 'pan') {
+      pIsPanning = true;
+      pIsDrawing = false;
+      pLastMouseX = e.clientX;
+      pLastMouseY = e.clientY;
+      viewport.style.cursor = 'grabbing';
+      return;
+    }
+    if (e.button === 0) {
+      const p = piPScreenToPixel(e.clientX, e.clientY);
+      if (p) {
+        pIsDrawing = true;
+        pIsPanning = false;
+        pLastMarked = p;
+        applyPiPStitch(p.x, p.y);
+      } else {
+        pIsPanning = true;
+        pIsDrawing = false;
+        pLastMouseX = e.clientX;
+        pLastMouseY = e.clientY;
+        viewport.style.cursor = 'grabbing';
+      }
+    }
+  });
+
+  pipWin.addEventListener('pointermove', (e) => {
+    if (pIsPanning) {
+      pPanX += e.clientX - pLastMouseX;
+      pPanY += e.clientY - pLastMouseY;
+      pLastMouseX = e.clientX;
+      pLastMouseY = e.clientY;
+      drawPiPCanvas();
+      return;
+    }
+    const p = piPScreenToPixel(e.clientX, e.clientY);
+    if (p) {
+      if (statCoords) statCoords.textContent = `${p.x}, ${p.y}`;
+      if (pIsDrawing && (!pLastMarked || pLastMarked.x !== p.x || pLastMarked.y !== p.y)) {
+        applyPiPStitch(p.x, p.y);
+        pLastMarked = p;
+      }
+    }
+  });
+
+  const stopPiP = () => {
+    pIsPanning = false;
+    pIsDrawing = false;
+    pLastMarked = null;
+    viewport.style.cursor = 'crosshair';
+  };
+  pipWin.addEventListener('pointerup', stopPiP);
+  pipWin.addEventListener('pointercancel', stopPiP);
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.2 : 0.833;
+    pZoom = Math.max(1, Math.min(64, pZoom * factor));
+    drawPiPCanvas();
+  }, { passive: false });
+
+  // Bars toggle in PiP
+  const pipContainer = pipWin.document.querySelector('.detached-container');
+  const togglePiPBars = () => {
+    pipContainer?.classList.toggle('bars-hidden');
+    setTimeout(() => {
+      resizePiPCanvas();
+      drawPiPCanvas();
+    }, 10);
+  };
+  pipWin.document.getElementById('pip-btn-toggle-bars')?.addEventListener('click', togglePiPBars);
+  pipWin.document.getElementById('pip-btn-show-bars')?.addEventListener('click', togglePiPBars);
+
+  pipWin.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' || e.key === 'h' || e.key === 'H') {
+      e.preventDefault();
+      togglePiPBars();
+    } else if (e.key === 'f' || e.key === 'F') {
+      fitPiP();
+    }
+  });
+
+  pipWin.document.getElementById('pip-btn-fit')?.addEventListener('click', fitPiP);
+  pipWin.document.getElementById('pip-btn-grid')?.addEventListener('click', () => {
+    state.showGrid = !state.showGrid;
+    drawPiPCanvas();
+  });
+  pipWin.document.getElementById('pip-btn-close')?.addEventListener('click', () => pipWin.close());
+
+  // Function called on main window state changes
+  state.pipUpdateCanvas = (ds) => {
+    if (title) title.textContent = ds.name || 'Detached View';
+    if (toolLabel) toolLabel.textContent = capitalize(ds.activeTool);
+    if (toolDot) toolDot.style.backgroundColor = ds.completeStyle.color;
+    if (statProgress && state.currentProject) {
+      const tot = state.currentProject.width * state.currentProject.height;
+      const done = state.completedSet.size;
+      statProgress.textContent = `${tot > 0 ? Math.round((done / tot) * 100) : 0}%`;
+      statCounts.textContent = `${done} / ${tot}`;
+    }
+    drawPiPCanvas();
+  };
+
+  resizePiPCanvas();
+  pipWin.addEventListener('resize', () => {
+    resizePiPCanvas();
+    drawPiPCanvas();
+  });
+  fitPiP();
+}
+

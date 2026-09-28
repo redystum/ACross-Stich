@@ -90,6 +90,17 @@
           </svg>
         </button>
 
+        <!-- Raspberry Pi Server Connection Button -->
+        <button id="btn-server-connect" class="btn btn-ghost btn-icon server-conn-btn" title="Raspberry Pi Server Connection" aria-label="Server Connection Settings">
+          <span class="server-status-dot online" id="header-server-dot"></span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+        </button>
+
         <!-- Theme Toggle -->
         <button id="btn-theme-toggle" class="btn btn-ghost btn-icon" title="Toggle Theme" aria-label="Toggle Theme">
           <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -263,7 +274,7 @@
         </button>
       </div>
 
-      <div class="toolbar-divider"></div>
+      <div class="toolbar-divider desktop-only"></div>
 
       <!-- Quick Action Controls -->
       <div class="toolbar-section actions-group">
@@ -285,17 +296,17 @@
           <span class="tool-label">Style</span>
         </button>
 
-        <!-- Mobile Palette Drawer Trigger -->
-        <button id="btn-bottom-palette" class="tool-action-btn mobile-only" title="Color Palette & Progress">
+        <!-- Detach Canvas (Always-On-Top Floating Window) -->
+        <button id="btn-detach-canvas" class="tool-action-btn desktop-only" title="Detach Image (Always-on-Top Floating Window)">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
-            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
-            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
-            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
-            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+            <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+            <rect x="12" y="9" width="8" height="6" rx="1" fill="currentColor" fill-opacity="0.25"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
-          <span class="tool-label">Palette</span>
+          <span class="tool-label">Detach</span>
         </button>
+
       </div>
 
       <div class="toolbar-divider"></div>
@@ -664,6 +675,39 @@
           <div class="modal-actions mt-3">
             <button type="button" id="btn-revert-single-color" class="btn btn-secondary">Revert to Original</button>
             <button type="button" id="btn-apply-replace-color" class="btn btn-primary">Apply Replacement</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Raspberry Pi Server Connection -->
+    <div id="modal-server" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-server-title">
+      <div class="modal-card modal-sm">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon">🍓</span>
+            <h2 id="modal-server-title" class="modal-title">Raspberry Pi Server</h2>
+          </div>
+          <button class="modal-close-btn" data-close-modal="modal-server" aria-label="Close modal">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-subtitle mb-2">Connect this app to your Raspberry Pi running Across Stitch Server on the local network.</p>
+
+          <div class="form-group">
+            <label class="form-label" for="input-server-url">Server Address / URL</label>
+            <input type="text" id="input-server-url" class="form-input" placeholder="http://raspberrypi.local:3000">
+            <span class="form-hint" id="server-status-message">Default: connects to local host/current origin</span>
+          </div>
+
+          <div class="server-lan-detected mb-2" id="server-lan-detected">
+            <label class="form-label-xs">Available LAN Addresses:</label>
+            <div class="lan-ip-chips" id="lan-ip-chips"></div>
+          </div>
+
+          <div class="modal-actions mt-3">
+            <button type="button" id="btn-test-server-connection" class="btn btn-secondary">Test Connection</button>
+            <button type="button" id="btn-save-server-connection" class="btn btn-primary">Save & Connect</button>
           </div>
         </div>
       </div>

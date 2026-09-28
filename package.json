@@ -5,10 +5,15 @@
   "private": true,
   "scripts": {
     "start": "bun run server.ts",
-    "dev": "bun --watch server.ts"
+    "dev": "bun --watch server.ts",
+    "pc": "electron pc-app/main.js",
+    "desktop": "electron pc-app/main.js",
+    "server": "bun run server/server.ts",
+    "server:dev": "bun --watch server/server.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "electron": "^44.4.5"
   },
   "peerDependencies": {
     "typescript": "^5"

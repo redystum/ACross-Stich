@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Across Stitch — Detached Window</title>
+  <link rel="stylesheet" href="/detached.css">
+</head>
+<body class="theme-dark">
+  <div class="detached-container" id="detached-container">
+    <!-- Slim Draggable Window Header -->
+    <header class="detached-header" id="detached-header">
+      <div class="drag-region">
+        <span class="app-icon">🧵</span>
+        <span class="project-title" id="detached-project-title">Detached View</span>
+        <div class="tool-pill" id="detached-tool-pill" title="Tool active from main page">
+          <span class="tool-dot" id="detached-tool-dot"></span>
+          <span class="tool-label" id="detached-tool-label">Stitch</span>
+        </div>
+      </div>
+
+      <div class="window-controls no-drag">
+        <!-- Hide/Show Header and Bottom Bar Toggle -->
+        <button class="win-btn" id="btn-toggle-bars" title="Hide Bars for Pure Canvas (Tab or H)">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 14 10 14 10 20"></polyline>
+            <polyline points="20 10 14 10 14 4"></polyline>
+            <line x1="14" y1="10" x2="21" y2="3"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+
+        <!-- Opacity Button -->
+        <button class="win-btn" id="btn-opacity" title="Toggle Opacity (100% / 85% / 65%)">
+          <span id="opacity-text">100%</span>
+        </button>
+
+        <!-- Grid Lines Toggle -->
+        <button class="win-btn" id="btn-grid" title="Toggle Grid Lines">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <path d="M3 9h18M3 15h18M9 3v18M15 3v18"></path>
+          </svg>
+        </button>
+
+        <!-- Zoom Fit -->
+        <button class="win-btn" id="btn-fit" title="Fit to Window">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        </button>
+
+        <!-- Minimize Window -->
+        <button class="win-btn" id="btn-min" title="Minimize">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+
+        <!-- Close / Re-dock Window -->
+        <button class="win-btn close" id="btn-close" title="Close and return to main window">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Canvas Viewport -->
+    <main class="detached-viewport" id="viewport">
+      <canvas id="detached-canvas"></canvas>
+    </main>
+
+    <!-- Sleek Micro-Status Footer -->
+    <footer class="detached-footer" id="detached-footer">
+      <div class="footer-left">
+        <span class="stat-progress" id="stat-progress">0%</span>
+        <span class="stat-counts" id="stat-counts">0 / 0</span>
+      </div>
+      <div class="footer-right">
+        <span class="stat-coords" id="stat-coords">--:--</span>
+        <span class="stat-hint">R-Click: Pan | L-Click: Stitch</span>
+      </div>
+    </footer>
+
+    <!-- Floating restore button when bars are hidden (placed outside viewport to never conflict with canvas pointer events) -->
+    <button class="floating-show-bars-btn no-drag" id="btn-show-bars" title="Show Header & Footer (Tab or H)" aria-label="Show Header and Footer">
+      <svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+        <line x1="3" y1="9" x2="21" y2="9"></line>
+        <line x1="3" y1="15" x2="21" y2="15"></line>
+      </svg>
+    </button>
+  </div>
+
+  <script src="/detached.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "across-stitch-desktop",
+  "version": "1.0.0",
+  "description": "Across Stitch PC Desktop App with Always-On-Top Detached Canvas",
+  "main": "main.js",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  }
+}

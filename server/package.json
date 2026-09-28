@@ -1,0 +1,15 @@
+{
+  "name": "across-stitch-server",
+  "version": "1.0.0",
+  "description": "Across Stitch Raspberry Pi Backend Server (Bun + SQLite)",
+  "main": "server.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --watch server.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
