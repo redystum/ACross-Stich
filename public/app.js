@@ -2741,7 +2741,7 @@ function setupBrowserPiPWindow(pipWin) {
     <div class="detached-container">
       <header class="detached-header">
         <div class="drag-region">
-          <span class="app-icon">🧵</span>
+          <span class="app-icon"><img src="/logo.png" width="16" height="16" alt="Across Stitch"></span>
           <span class="project-title" id="pip-project-title">${state.currentProject?.name || 'Detached View'}</span>
           <div class="tool-pill" id="pip-tool-pill">
             <span class="tool-dot" id="pip-tool-dot" style="background-color: ${state.currentProject?.completeStyle?.color || '#10b981'};"></span>

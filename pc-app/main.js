@@ -32,12 +32,15 @@ function saveServerUrl(url) {
 function createMainWindow() {
   const serverUrl = loadServerUrl();
 
+  const logoPath = path.join(__dirname, '../public/logo.png');
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 720,
     minHeight: 540,
     title: 'Across Stitch',
+    icon: logoPath,
     backgroundColor: '#09090b',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -82,6 +85,8 @@ function createDetachedWindow(initialState) {
   const posX = Math.max(20, screenWidth - winW - 40);
   const posY = Math.max(40, Math.floor((screenHeight - winH) / 2));
 
+  const logoPath = path.join(__dirname, '../public/logo.png');
+
   detachedWindow = new BrowserWindow({
     width: winW,
     height: winH,
@@ -95,6 +100,7 @@ function createDetachedWindow(initialState) {
     backgroundColor: '#09090b',
     skipTaskbar: false,
     title: 'Across Stitch — Detached',
+    icon: logoPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
